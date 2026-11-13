@@ -1,0 +1,14 @@
+plugins {
+    alias(bb4Libs.plugins.scala.library)
+    alias(bb4Libs.plugins.publish)
+    alias(bb4Libs.plugins.application)
+}
+
+description = 'DOM and XML utilities for bb4 projects'
+group = 'com.barrybecker4'
+version = '3.0-SNAPSHOT'
+
+bb4 {
+    archivesBaseName.set('bb4-xml')
+    mainClass.set('com.barrybecker4.xml.DomUtil')
+}

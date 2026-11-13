@@ -1,6 +1,15 @@
+.gradle
+.project
+build/
+bin/
 *.class
 *.tasty
 *.log
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+.idea
+*.iml
+*.iws
+*.ipr
+.vscode/settings.json
+.bloop/
+.metals/
 hs_err_pid*

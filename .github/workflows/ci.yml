@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+  repository_dispatch:
+    types: [ upstream-updated ]
+
+jobs:
+  build:
+    uses: bb4/.github/.github/workflows/bb4-ci.yml@main
+    with:
+      gradle-args: build
+      publish: true
+      notify-downstream: true
+    secrets:
+      OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+      OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+      BB4_DISPATCH_TOKEN: ${{ secrets.BB4_DISPATCH_TOKEN }}
