@@ -5,11 +5,11 @@ import com.barrybecker4.xml.DomUtil
 import org.w3c.dom.Document
 import javax.swing._
 import javax.swing.border.BevelBorder
-import javax.swing.border.Border
 import javax.swing.border.CompoundBorder
 import javax.swing.border.EmptyBorder
 import javax.swing.event.TreeSelectionEvent
 import javax.swing.event.TreeSelectionListener
+import javax.swing.filechooser.FileNameExtensionFilter
 import java.awt._
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -26,15 +26,15 @@ object DomEcho {
   private val RIGHT_WIDTH = 340
   private val WINDOW_WIDTH = LEFT_WIDTH + RIGHT_WIDTH
 
-  def makeFrame(document: Document): Unit = {
-    val frame = new JFrame("DOM Echo")
+  def makeFrame(document: Document, initialFile: Option[File] = None): Unit = {
+    val frame = new JFrame(frameTitle(initialFile))
     frame.addWindowListener(new WindowAdapter() {
       override def windowClosing(e: WindowEvent): Unit = {
         System.exit(0)
       }
     })
-    // Set up the tree, the views, and display it all
     val echoPanel = new DomEcho(document)
+    frame.setJMenuBar(createMenuBar(frame, echoPanel))
     frame.getContentPane.add(echoPanel)
     frame.pack()
     val screenSize = Toolkit.getDefaultToolkit.getScreenSize
@@ -45,40 +45,80 @@ object DomEcho {
     frame.setVisible(true)
   }
 
+  private def frameTitle(file: Option[File]): String =
+    file.map(f => s"DOM Echo — ${f.getName}").getOrElse("DOM Echo")
+
+  private def createMenuBar(frame: JFrame, echoPanel: DomEcho): JMenuBar = {
+    val openItem = new JMenuItem("Open…")
+    openItem.addActionListener(_ => openFile(frame, echoPanel))
+    val fileMenu = new JMenu("File")
+    fileMenu.add(openItem)
+    val menuBar = new JMenuBar
+    menuBar.add(fileMenu)
+    menuBar
+  }
+
+  private def openFile(frame: JFrame, echoPanel: DomEcho): Unit = {
+    val chooser = new JFileChooser
+    chooser.setCurrentDirectory(new File("."))
+    chooser.setFileFilter(new FileNameExtensionFilter("XML files", "xml"))
+    if (chooser.showOpenDialog(frame) != JFileChooser.APPROVE_OPTION) return
+
+    val file = chooser.getSelectedFile
+    DomUtil.parseXMLFile(file) match {
+      case Some(document) =>
+        echoPanel.loadDocument(document)
+        frame.setTitle(frameTitle(Some(file)))
+      case None =>
+        JOptionPane.showMessageDialog(
+          frame,
+          s"Could not parse XML file:\n${file.getAbsolutePath}",
+          "Open failed",
+          JOptionPane.ERROR_MESSAGE
+        )
+    }
+  }
+
   /** for testing */
   def main(argv: Array[String]): Unit = {
-    val documentOpt =
-      if (argv.length < 1) Some(DomUtil.buildDom)
-      else DomUtil.parseXMLFile(new File(argv(0)))
-
-    documentOpt match {
-      case Some(document) => makeFrame(document)
-      case None =>
-        System.err.println(s"Could not parse XML file: ${argv(0)}")
-        System.exit(1)
+    if (argv.length < 1) {
+      makeFrame(DomUtil.buildDom)
+    } else {
+      val file = new File(argv(0))
+      DomUtil.parseXMLFile(file) match {
+        case Some(document) => makeFrame(document, Some(file))
+        case None =>
+          System.err.println(s"Could not parse XML file: ${argv(0)}")
+          System.exit(1)
+      }
     }
   }
 }
 
 /**
-  * @param document the xml document to show
+  * @param initialDocument the xml document to show initially
   */
-class DomEcho(val document: Document) extends JPanel {
+class DomEcho(initialDocument: Document) extends JPanel {
+  private var document: Document = initialDocument
   this.setBorder(createBorder)
-  val tree = new JTree(new DomToTreeModelAdapter(document))
-  // Left-side view
-  val treeView = new JScrollPane(tree)
+  private val tree = new JTree(new DomToTreeModelAdapter(document))
+  private val treeView = new JScrollPane(tree)
   treeView.setPreferredSize(new Dimension(DomEcho.LEFT_WIDTH, DomEcho.WINDOW_HEIGHT))
-  // Right-side view
-  val htmlPane = new JEditorPane
+  private val htmlPane = new JEditorPane
   htmlPane.setEditable(false)
-  val htmlView = new JScrollPane(htmlPane)
+  private val htmlView = new JScrollPane(htmlPane)
   htmlView.setPreferredSize(new Dimension(DomEcho.RIGHT_WIDTH, DomEcho.WINDOW_HEIGHT))
   connectViews(tree, htmlPane)
-  val splitPane: JSplitPane = createSplitPane(treeView, htmlView)
-  // Add GUI components
+  private val splitPane: JSplitPane = createSplitPane(treeView, htmlView)
   this.setLayout(new BorderLayout)
   this.add(splitPane)
+
+  /** Replace the displayed document (e.g. after File → Open…). */
+  def loadDocument(doc: Document): Unit = {
+    document = doc
+    tree.setModel(new DomToTreeModelAdapter(document))
+    htmlPane.setText("")
+  }
 
   /**
     * Wire the two views together. Use a selection listener
