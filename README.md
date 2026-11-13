@@ -26,6 +26,15 @@ See the [releases page](https://github.com/bb4/bb4-xml/releases) or [Maven Centr
 - **`DomTransformer`** — whitespace cleanup and `<use ref>` deep-copy substitution
 - **`XmlErrorHandler`** — SAX error handler with stdout/stderr logging
 
+### Demo (not published)
+
+**`DomEcho`** is a Swing DOM tree viewer kept under `scala-test` so it is not part of the library JAR.
+
+```bash
+./gradlew runDomEcho
+./gradlew runDomEcho --args=path/to/file.xml
+```
+
 ## Building from source
 
 See the [Building bb4 Projects wiki](https://github.com/bb4/bb4-common/wiki/Building-bb4-Projects).

@@ -12,3 +12,12 @@ bb4 {
     archivesBaseName.set('bb4-xml')
     mainClass.set('com.barrybecker4.xml.DomUtil')
 }
+
+// Swing DOM viewer lives in scala-test only (not published).
+tasks.register('runDomEcho', JavaExec) {
+    dependsOn testClasses
+    group = 'application'
+    description = 'Swing DOM tree viewer demo (test sources; not published)'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.barrybecker4.xml.viewer.DomEcho'
+}
