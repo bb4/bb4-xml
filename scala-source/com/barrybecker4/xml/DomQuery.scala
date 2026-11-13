@@ -3,35 +3,42 @@ package com.barrybecker4.xml
 
 import org.w3c.dom.{Document, Element, NamedNodeMap, Node}
 
+import scala.collection.mutable
+
 /** Finding elements and reading attributes on a DOM tree. */
 object DomQuery {
 
+  /** One preorder pass. The first non-empty literal "id" attribute wins. */
+  private[xml] def buildIdIndex(root: Node): Map[String, Element] = {
+    val index = mutable.HashMap[String, Element]()
+    def walk(node: Node): Unit = {
+      if (node == null) return
+      if (node.getNodeType == Node.ELEMENT_NODE) {
+        val element = node.asInstanceOf[Element]
+        val id = element.getAttribute("id")
+        if (id.nonEmpty && !index.contains(id)) index(id) = element
+      }
+      val children = node.getChildNodes
+      var i = 0
+      while (i < children.getLength) {
+        walk(children.item(i))
+        i += 1
+      }
+    }
+    walk(root)
+    index.toMap
+  }
+
   /**
     * Resolve an id to an element. Prefers Document.getElementById when a DTD/schema
-    * typed the attribute as ID; otherwise walks the tree matching an "id" attribute.
+    * typed the attribute as ID; otherwise uses the prebuilt literal "id" index.
     * Needed because we disable loading external DTDs (see DomParser).
     */
-  private[xml] def findElementById(document: Document, id: String): Option[Element] =
-    Option(document.getElementById(id))
-      .orElse(findElementByIdAttribute(document.getDocumentElement, id))
-
-  private def findElementByIdAttribute(node: Node, id: String): Option[Element] = {
-    if (node == null) return None
-    if (node.getNodeType == Node.ELEMENT_NODE) {
-      val element = node.asInstanceOf[Element]
-      if (id == element.getAttribute("id")) return Some(element)
-    }
-    val children = node.getChildNodes
-    var i = 0
-    while (i < children.getLength) {
-      findElementByIdAttribute(children.item(i), id) match {
-        case found @ Some(_) => return found
-        case None => ()
-      }
-      i += 1
-    }
-    None
-  }
+  private[xml] def findElementById(
+      document: Document,
+      id: String,
+      index: Map[String, Element]): Option[Element] =
+    Option(document.getElementById(id)).orElse(index.get(id))
 
   /** Get the value for an attribute.
     * Error if the attribute does not exist.
